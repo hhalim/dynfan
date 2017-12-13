@@ -1,41 +1,40 @@
 #!/bin/bash
 
 #set -x #DEBUG
-#testTemp=(20 90) #TEST
 
 #VARIABLES
-declare -A LASTTEMP
+LASTTEMP=()
 
-MINTEMP=40
-MAXTEMP=80
-DELAY=10
-DEGDELTA=3 #change temp if over or equal Xdeg change
-LOCKDIR=/tmp/dynfan-lock
+LOWERT=40  	#lower temp limit
+UPPERT=80  	#upper temp limit
+SDELAY=10  	#Sleep
+DELTAT=3 	#delta temp to change fan speed
+LOCKDIR=/tmp/dynfan-lock	#locking for only running one dynfan
 
 #Remove the lock directory
 function cleanup {
     if rmdir $LOCKDIR; then
         echo "DynFan unlocked."
     else
-        echo "Failed to remove lock directory '$LOCKDIR'"
+        echo "Failed to remove lock '$LOCKDIR'"
         exit 1
     fi
 }
 
 function dynamicFan {
-	while getopts ":l:u:d:h:" opt; do
-		case ${opt} in
+	while getopts ":l:u:s:d:" opt; do
+		case $opt in
 			l)
-				MINTEMP=$OPTARG
+				LOWERT=$OPTARG
 				;;
 			u)
-				MAXTEMP=$OPTARG
+				UPPERT=$OPTARG
+				;;
+			s)
+				SDELAY=$OPTARG
 				;;
 			d)
-				DELAY=$OPTARG
-				;;
-			h)
-				DEGDELTA=$OPTARG
+				DELTAT=$OPTARG
 				;;
 			\?)
 				echo "Invalid option: $OPTARG" >&2
@@ -48,29 +47,30 @@ function dynamicFan {
 		esac
 	done
 
-	while sleep $DELAY; do
+	while sleep $SDELAY; do
+		#echo "-------------------------------------" #DEBUG
 		index=0
-		for x in $(nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader); do
-		#for x in ${testTemp[@]}; do #DEBUG TEST
-			#echo "index:$index"
-			if [[ ${LASTTEMP[$index]} != $x ]] && [[ $x -ge $(( ${LASTTEMP[$index]} + DEGDELTA ))
-					|| $x -le $(( ${LASTTEMP[$index]} - DEGDELTA )) ]]; then
-				#echo "current: $x; LASTTEMP: ${LASTTEMP[$index]}; diff: $(( ${LASTTEMP[$index]} + DEGDELTA ))"
+		for x in $(DISPLAY=:0 nvidia-settings -t -q=[gpu]/GPUCoreTemp); do
+			#echo "$index -- Current: $x; LASTTEMP: ${LASTTEMP[$index]}" #DEBUG
+			if [[ ${LASTTEMP[$index]} == $x ]]; then
+				index=$((index+1))
+				continue
+			fi
 
-				if [ $x -le $MINTEMP ] || [ $x -ge $MAXTEMP ]; then
-					#echo "current: $x; lte $MINTEMP or gte $MAXTEMP set AUTO"
+			if  [ $x -le $LOWERT ] || [ $x -ge $UPPERT ]; then
+				currentFanState=$(DISPLAY=:0 nvidia-settings -t -q [gpu:$index]/GPUFanControlState)
+				if [[ $currentFanState != 0 ]]; then
+					#echo "$index -- Temp: $x; lte $LOWERT or gte $UPPERT set to AUTO" #DEBUG
 					#set to auto temp
 					DISPLAY=:0 nvidia-settings -a [gpu:$index]/GPUFanControlState=0 1> /dev/null
 					LASTTEMP[$index]=$x
-				else
-					#echo "set fan: $x"
-					#set fan only if temp changes
-					DISPLAY=:0 nvidia-settings -a [gpu:$index]/GPUFanControlState=1 -a [fan:$index]/GPUTargetFanSpeed=$x 1> /dev/null
-					LASTTEMP[$index]=$x
 				fi
-
+			elif [ $x -le $(( ${LASTTEMP[$index]} - DELTAT )) ] || [ $x -ge $(( ${LASTTEMP[$index]} + DELTAT )) ]; then
+				#echo "$index -- Temp: $x; Set fan: $x" #DEBUG
+				# Manual fan speed between upper and lower temp limit
+				DISPLAY=:0 nvidia-settings -a [gpu:$index]/GPUFanControlState=1 -a [fan:$index]/GPUTargetFanSpeed=$x 1> /dev/null
+				LASTTEMP[$index]=$x
 			fi
-			#testTemp[$index]=$(( ${testTemp[$index]}-2 )) #TEST DEBUG
 
 			index=$((index+1))
 		done
@@ -78,13 +78,11 @@ function dynamicFan {
 }
 
 if mkdir $LOCKDIR; then
-    #Ensure that if we "grabbed a lock", we release it
+    #Ensure that if locked, release it
     #Works for SIGTERM and SIGINT(Ctrl-C)
     trap "cleanup" EXIT
-
-    # Processing starts here
-	dynamicFan
+	dynamicFan "$@"
 else
-    echo "Could not create lock directory '$LOCKDIR'"
+    echo "Could not create lock '$LOCKDIR'"
     exit 1
 fi
