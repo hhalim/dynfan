@@ -1,5 +1,5 @@
 # dynfan
-Dynamic fan control for Nvidia in Ubuntu linux. 
+Dynamic fan control for Nvidia in linux. Had been tested in Ubuntu 16.04 only. 
 
 Unlike windows with MSI Burner or similar, linux has no apps to dynamically change the speed of the Nvidia fans. Your option is to leave the gpu fan to auto speed, which is not aggressive enough for crypto mining, or fixed speed, which is very inefficient when the temperature changes.
 
