@@ -26,4 +26,4 @@ Insert this line in crontab:
 -s Sleep delay in seconds, set interval of temperature check. Default: 10
 -d Delta temperature before fan speed is changed. Default: 3
 ```
-Fan speed is set to automatic when the temp range is outside the lower/upper range.
+Fan speed is set to automatic when the temp range falls outside the lower/upper range.
