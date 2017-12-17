@@ -1,5 +1,5 @@
 # dynfan
-Dynamic fan control for Nvidia cards in linux. Had been tested in Ubuntu 16.04 only. 
+Simple Nvidia dynamic fan script for Linux. Tested in Ubuntu 16.04 only with Nvidia GTX 1060 / 1070 only. 
 
 Unlike windows with MSI Burner or similar, linux has no apps to dynamically change the speed of the Nvidia fans. Your option is to leave the gpu fan to auto speed, which is not aggressive enough for crypto mining, or fixed speed, which is very inefficient when the temperature changes.
 
@@ -20,11 +20,10 @@ Insert this line in crontab:
 ```
 
 # Configuration
-Accepts arguments:
 ```
--l Lower temperature range in C. Default: 40
--u Upper temperature range in C. Default: 80
+-l Lower temperature range in Celcius. Default: 40
+-u Upper temperature range in Celcius. Default: 80
 -s Sleep delay in seconds, set interval of temperature check. Default: 10
 -d Delta temperature before fan speed is changed. Default: 3
 ```
-Fan speed set to automatic when the temp range is outside the lower/upper range.
+Fan speed is set to automatic when the temp range is outside the lower/upper range.
