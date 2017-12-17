@@ -21,8 +21,8 @@ Insert this line in crontab:
 
 # Configuration
 ```
--l Lower temperature range in Celcius. Default: 40
--u Upper temperature range in Celcius. Default: 80
+-l Lower temperature range in Celsius. Default: 40
+-u Upper temperature range in Celsius. Default: 80
 -s Sleep delay in seconds, set interval of temperature check. Default: 10
 -d Delta temperature before fan speed is changed. Default: 3
 ```
